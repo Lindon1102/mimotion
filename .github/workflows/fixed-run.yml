@@ -1,0 +1,45 @@
+name: 刷步数-固定定时
+
+on:
+  schedule:
+    - cron: '37 0,2,4,6,8,10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 读取仓库
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: 初始化Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: 执行刷步数
+        env:
+          CONFIG: ${{ secrets.CONFIG }}
+          AES_KEY: ${{ secrets.AES_KEY }}
+        run: |
+          pip3 install -r requirements.txt
+          python3 main.py
+
+      - name: 保存登录令牌
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add encrypted_tokens.data
+          if git diff --cached --quiet; then
+            echo "令牌没有变化"
+          else
+            git commit -m "persist tokens"
+            git push origin master
+          fi
